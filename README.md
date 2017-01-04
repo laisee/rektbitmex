@@ -1,2 +1,8 @@
-# rektbitmex
-bot tracking liquidations on Bitmex exchange (www.bitmex.com). Stores records and publishes to twitter
+Install required libs by using 'pip' tool
+
+Libs are:
+
+tweepy
+requests
+sqlite3
+commands
