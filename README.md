@@ -6,10 +6,8 @@ Install required libs by using 'pip' tool
 
 Libs are:
 
-- tweepy
 - requests
-- sqlite3
-- commands
+- tweepy
 
 Update the Twitter keys and token values to enable posting to twitter, otherwise comment out the call to send Twitter update.
 
