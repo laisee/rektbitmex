@@ -1,5 +1,7 @@
 Rekt @ Bitmex bot
 
+Runs under Python 2.7.X, not 3.X
+
 Install required libs by using 'pip' tool
 
 Libs are:
