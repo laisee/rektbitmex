@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# ignore rekt db
+rekt.sqlite
+
 # Distribution / packaging
 .Python
 env/

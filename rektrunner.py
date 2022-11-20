@@ -5,15 +5,14 @@ import requests
 import time
 import tweepy
 from time import gmtime, strftime
-from exceptions import BaseException
 from traceback import format_exc
 import sqlite3
-import commands
+import subprocess
 import logging
 
 ''' CHECK, STORE EACH Process ID '''
 def addPID():
-   print ' In Add PID SQLlite() '
+   print(' In Add PID SQLlite() ')
    sqlite_file = 'rekt.sqlite'    # name of the sqlite database file
    table_name = 'rekt_PID'  # name of the table to be created
    new_field = 'rekt_PID' # name of the column
@@ -22,7 +21,7 @@ def addPID():
    # Connecting to the database file
    conn = sqlite3.connect("rekt.sqlite")
    c = conn.cursor()
-   print ' Connection() open in  Add PID SQLlite() '
+   print(' Connection() open in  Add PID SQLlite() ')
    rekt_count = 0
    try:
       c.execute('SELECT 1 FROM {tn}'.format(tn=table_name))
@@ -31,11 +30,11 @@ def addPID():
       pass
 
    if rekt_count == 0:
-      print "Creating new PID table ... "
+      print("Creating new PID table ... ")
       # Creating a new SQLite table with 1 column
       c.execute('CREATE TABLE {tn} ({nf} {ft} PRIMARY_KEY)'.format(tn=table_name, nf=new_field, ft=field_type))
    else:
-      print " Table %s exists already" % table_name
+      print(" Table %s exists already" % table_name)
 
    # Committing changes and closing the connection to the database file
    conn.commit()
@@ -43,7 +42,7 @@ def addPID():
 
 ''' CHECK, STORE EACH LIQUIDATION '''
 def addRekt():
-   print ' In Add Rekt SQLlite() '
+   print(' In Add Rekt SQLlite() ')
    sqlite_file = 'rekt.sqlite'    # name of the sqlite database file
    table_name = 'rekkage'  # name of the table to be created
    new_field = 'rekt_key' # name of the column
@@ -60,11 +59,11 @@ def addRekt():
       pass
 
    if rekt_count == 0:
-      print "Creating new Rekkage table ... "
+      print("Creating new Rekkage table ... ")
       # Creating a new SQLite table with 1 column
       c.execute('CREATE TABLE {tn} ({nf} {ft} PRIMARY KEY, rekt_symbol TEXT, rekt_qty INTEGER, rekt_price REAL, rekt_position TEXT, rekt_side TEXT, rekt_ts TEXT)'.format(tn=table_name, nf=new_field, ft=field_type))
    else:
-      print " Table %s exists already" % table_name
+      print(" Table %s exists already" % table_name)
 
    # Committing changes and closing the connection to the database file
    conn.commit()
@@ -96,7 +95,7 @@ def SetupLogging():
 ''' Run the process only once at a time '''
 def RunOnce():
     script_name = os.path.basename(__file__)
-    l = commands.getstatusoutput("ps aux | grep -e '%s' | grep -v grep | awk '{print $2}'| awk '{print $2}'" % script_name)
+    l = subprocess.getstatusoutput("ps aux | grep -e '%s' | grep -v grep | awk '{print $2}'| awk '{print $2}'" % script_name)
     if l[1]:
         logger.info("process '%s' is already running, exiting now" % script_name)
         sys.exit(0);
@@ -160,7 +159,7 @@ def getRekage():
   
    data = json.loads(r.text)
    if data:
-      print data
+      print(data)
       for rek in data:
           if rek["side"] == "Buy":
              position = "Short"
