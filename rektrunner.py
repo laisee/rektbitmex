@@ -6,7 +6,6 @@ import time
 import tweepy
 from traceback import format_exc
 import sqlite3
-import subprocess
 import logging
 from config import base_url
 from database import init_rekkage_db, init_pid_db
@@ -16,43 +15,47 @@ logger = logging.getLogger('RektBitmex')
 
 
 def SetupLogging():
-   """Return configured logger."""
-   # configure logger with file and console handlers
-   logger.setLevel(logging.INFO)
+    """Return configured logger."""
 
-   # create file handler which logs messages
-   fh = logging.FileHandler('rektbitmex.log')
-   fh.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)
 
-   # create console handler 
-   ch = logging.StreamHandler()
-   ch.setLevel(logging.INFO)
-   # create formatter and add it to the handlers
-   formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-   fh.setFormatter(formatter)
-   ch.setFormatter(formatter)
-   # add the handlers to the logger
-   logger.addHandler(fh)
-   logger.addHandler(ch)
-   return logger
+    fh = logging.FileHandler("rektbitmex.log")
+    fh.setLevel(logging.INFO)
 
-"""Exit if another instance of this script is already running."""
-def RunOnce():
-    """Check for another running instance and exit if found."""
-    script_name = os.path.basename(__file__)
-    command = (
-        "ps aux | grep -e '%s' | grep -v grep | awk '{print $2}' | "
-        "awk '{print $2}'" % script_name
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    proc_output = subprocess.getstatusoutput(command)
-    if proc_output[1]:
-        logger.info(
-            "process '%s' is already running, exiting now" % script_name
-        )
-        sys.exit(0)
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)
+    return logger
 
 
-"""Insert or update a liquidation record."""
+def RunOnce(pid_file="rektbitmex.pid"):
+    """Exit if another instance of this script is already running."""
+
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file) as fh:
+                existing_pid = int(fh.read().strip())
+            os.kill(existing_pid, 0)
+        except (OSError, ValueError):
+            pass
+        else:
+            logger.info(
+                "process '%s' is already running, exiting now", existing_pid
+            )
+            sys.exit(0)
+
+    with open(pid_file, "w") as fh:
+        fh.write(str(os.getpid()))
+
+
 def gotRek(
     rekt_key,
     symbol,
@@ -62,16 +65,12 @@ def gotRek(
     side,
     db_path="rekt.sqlite",
 ):
+    """Insert or update a liquidation record."""
     rc = False
     msg = []
-    table_name = 'rekkage'
     with sqlite3.connect(db_path) as conn:
         c = conn.cursor()
-        c.execute(
-            "SELECT * FROM {tn} WHERE {idf}='{rekt_key}'".format(
-                tn=table_name, idf='rekt_key', rekt_key=rekt_key
-            )
-        )
+        c.execute("SELECT * FROM rekkage WHERE rekt_key=?", (rekt_key,))
         row = c.fetchone()
         if row:
             logger.info("checking record %s " % rekt_key)
@@ -84,8 +83,9 @@ def gotRek(
                 try:
                     with conn:
                         c.execute(
-                            "UPDATE Rekkage SET rekt_qty = %s "
-                            "WHERE rekt_key = '%s'" % (qty, rekt_key)
+                            "UPDATE Rekkage SET rekt_qty = ? "
+                            "WHERE rekt_key = ?",
+                            (qty, rekt_key),
                         )
                     logger.info(
                         "Rekkord %s has been updated from %s to %s "
@@ -104,26 +104,17 @@ def gotRek(
                 with conn:
                     c.execute(
                         (
-                            "INSERT INTO {tn} (rekt_key,rekt_symbol,rekt_qty,"
-                            "rekt_price,rekt_position,rekt_side,rekt_ts) "
-                            "VALUES ('{rekt_key}','{rekt_symbol}',{rekt_qty},"
-                            "{rekt_price},'{rekt_position}','{rekt_side}',"
-                            "(CURRENT_TIMESTAMP))"
-                        ).format(
-                            tn=table_name,
-                            rekt_key=rekt_key,
-                            rekt_symbol=symbol,
-                            rekt_qty=qty,
-                            rekt_price=price,
-                            rekt_position=position,
-                            rekt_side=side,
-                        )
+                            "INSERT INTO rekkage ("
+                            "rekt_key, rekt_symbol, rekt_qty, "
+                            "rekt_price, rekt_position, rekt_side, rekt_ts) "
+                            "VALUES (?, ?, ?, ?, ?, ?, (CURRENT_TIMESTAMP))"
+                        ),
+                        (rekt_key, symbol, qty, price, position, side),
                     )
                     cur = conn.cursor()
                     cur.execute(
-                        "SELECT * FROM {tn} WHERE {idf}='{rekt_key}'".format(
-                            tn=table_name, idf='rekt_key', rekt_key=rekt_key
-                        )
+                        "SELECT * FROM rekkage WHERE rekt_key=?",
+                        (rekt_key,),
                     )
                     for row in cur:
                         logger.info("Rekkord '%s' has been Added " % row[0])
@@ -133,14 +124,14 @@ def gotRek(
     return rc
 
 
-"""Fetch liquidation information from BitMEX."""
 def getRekage(db_path="rekt.sqlite"):
+    """Fetch liquidation information from BitMEX."""
 
     msgs = []
     url = base_url + "order/liquidations"
 
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=10)
     except BaseException:
         logger.error(format_exc())
         return ""
@@ -186,8 +177,8 @@ def getRekage(db_path="rekt.sqlite"):
     return msgs
 
 
-"""Send liquidation messages to Twitter."""
 def WriteRekage(msgs):
+    """Send liquidation messages to Twitter."""
 
     if msgs is None or len(msgs) == 0:
         return
@@ -198,6 +189,12 @@ def WriteRekage(msgs):
     app_secret = os.getenv('TWITTER_APP_SECRET')
     access_token = os.getenv('TWITTER_ACCESS_TOKEN')
     access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+
+    if not all([app_key, app_secret, access_token, access_token_secret]):
+        logger.warning(
+            "Twitter credentials not fully configured; skipping tweet"
+        )
+        return
 
     auth = tweepy.OAuthHandler(app_key, app_secret)
     auth.set_access_token(access_token, access_token_secret)

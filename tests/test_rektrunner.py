@@ -71,7 +71,7 @@ def test_getRekage_success(monkeypatch, tmp_path):
             '"side":"Buy"}]'
         )
 
-    def fake_get(url):
+    def fake_get(url, **kwargs):
         return FakeResponse()
 
     monkeypatch.setattr(requests, "get", fake_get)
