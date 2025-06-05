@@ -18,9 +18,7 @@ logger = logging.getLogger('RektBitmex')
 
 """Setup logging with file and console output."""
 def SetupLogging():
-   """Return configured logger."""
-   global logger
-   # configure logger with file and console handlers
+   """Return configured logger."""   # configure logger with file and console handlers
    logger.setLevel(logging.INFO)
 
    # create file handler which logs messages
