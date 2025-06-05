@@ -1,6 +1,5 @@
 import logging
 import sqlite3
-from contextlib import closing
 
 logger = logging.getLogger(__name__)
 
