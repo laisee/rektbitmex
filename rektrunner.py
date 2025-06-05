@@ -16,31 +16,27 @@ logger = logging.getLogger('RektBitmex')
 
 
 def SetupLogging():
-    """Return configured logger."""
-    # configure logger with file and console handlers
-    logger.setLevel(logging.INFO)
+   """Return configured logger."""
+   # configure logger with file and console handlers
+   logger.setLevel(logging.INFO)
 
-    # create file handler which logs messages
-    fh = logging.FileHandler('rektbitmex.log')
-    fh.setLevel(logging.INFO)
+   # create file handler which logs messages
+   fh = logging.FileHandler('rektbitmex.log')
+   fh.setLevel(logging.INFO)
 
-    # create console handler
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    # create formatter and add it to the handlers
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    # add the handlers to the logger
-    logger.addHandler(fh)
-    logger.addHandler(ch)
-    return logger
-
+   # create console handler 
+   ch = logging.StreamHandler()
+   ch.setLevel(logging.INFO)
+   # create formatter and add it to the handlers
+   formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+   fh.setFormatter(formatter)
+   ch.setFormatter(formatter)
+   # add the handlers to the logger
+   logger.addHandler(fh)
+   logger.addHandler(ch)
+   return logger
 
 """Exit if another instance of this script is already running."""
-
-
 def RunOnce():
     """Check for another running instance and exit if found."""
     script_name = os.path.basename(__file__)
@@ -57,8 +53,6 @@ def RunOnce():
 
 
 """Insert or update a liquidation record."""
-
-
 def gotRek(
     rekt_key,
     symbol,
@@ -140,8 +134,6 @@ def gotRek(
 
 
 """Fetch liquidation information from BitMEX."""
-
-
 def getRekage(db_path="rekt.sqlite"):
 
     msgs = []
@@ -195,8 +187,6 @@ def getRekage(db_path="rekt.sqlite"):
 
 
 """Send liquidation messages to Twitter."""
-
-
 def WriteRekage(msgs):
 
     if msgs is None or len(msgs) == 0:
