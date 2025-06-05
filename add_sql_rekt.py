@@ -5,7 +5,6 @@ import requests
 import datetime
 import tweepy
 from time import gmtime, strftime
-from exceptions import BaseException
 from traceback import format_exc
 import sqlite3
 import logging
@@ -43,7 +42,7 @@ def addRekt():
 
    # Committing changes and closing the connection to the database file
    conn.commit()
-   conn.close
+   conn.close()
 
 ''' CHECK, STORE EACH LIQUIDATION '''
 def addPID():
@@ -75,7 +74,7 @@ def addPID():
 
    # Committing changes and closing the connection to the database file
    conn.commit()
-   conn.close
+   conn.close()
 
 if __name__ == "__main__":
    addRekt()

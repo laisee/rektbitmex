@@ -40,7 +40,7 @@ def addPID():
 
    # Committing changes and closing the connection to the database file
    conn.commit()
-   conn.close
+   conn.close()
 
 ''' CHECK, STORE EACH LIQUIDATION '''
 def addRekt():
@@ -71,7 +71,7 @@ def addRekt():
 
    # Committing changes and closing the connection to the database file
    conn.commit()
-   conn.close
+   conn.close()
 
 
 ''' Setup logging with file, console output '''
@@ -138,7 +138,7 @@ def gotRek(rekt_key, symbol, qty, price, position, side):
       except BaseException as ex:
         logger.error(format_exc())
 
-   conn.close
+   conn.close()
    return rc
 
 ''' Get rekt details '''
