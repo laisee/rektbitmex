@@ -1,11 +1,3 @@
-import os
-import sys
-import json
-import requests
-import datetime
-import tweepy
-from time import gmtime, strftime
-from traceback import format_exc
 import logging
 from database import init_rekkage_db, init_pid_db
 
@@ -16,10 +8,12 @@ def addRekt():
     """Initialize the rekkage table."""
     init_rekkage_db()
 
+
 def addPID():
     """Initialize the PID table."""
     init_pid_db()
 
+
 if __name__ == "__main__":
-   addRekt()
-   addPID()
+    addRekt()
+    addPID()
