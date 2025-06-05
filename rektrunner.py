@@ -26,8 +26,10 @@ def addPID():
    try:
       c.execute('SELECT 1 FROM {tn}'.format(tn=table_name))
       rekt_count = c.fetchone()
-   except:
+   except sqlite3.OperationalError:
       pass
+   except Exception:
+      logger.error(format_exc())
 
    if rekt_count == 0:
       print("Creating new PID table ... ")
@@ -55,8 +57,10 @@ def addRekt():
    try:
       c.execute('SELECT 1 FROM {tn}'.format(tn=table_name))
       rekt_count = c.fetchone()
-   except:
+   except sqlite3.OperationalError:
       pass
+   except Exception:
+      logger.error(format_exc())
 
    if rekt_count == 0:
       print("Creating new Rekkage table ... ")
