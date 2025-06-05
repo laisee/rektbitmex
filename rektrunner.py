@@ -181,10 +181,11 @@ def WriteRekage(msgs):
      return
 
    # Consumer keys and access tokens
-   app_key             = 'ADD TWITTER APP KEY'
-   app_secret          = 'ADD TWITTER APP SECRET'
-   access_token        = 'ADD TWITTER ACCESS TOKEN'
-   access_token_secret = 'ADD TWITTER ACCESS TOKEN SECRET'
+   # Read credentials from environment variables
+   app_key             = os.getenv('TWITTER_APP_KEY')
+   app_secret          = os.getenv('TWITTER_APP_SECRET')
+   access_token        = os.getenv('TWITTER_ACCESS_TOKEN')
+   access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
 
    auth = tweepy.OAuthHandler(app_key,app_secret)
    auth.set_access_token(access_token,access_token_secret)
