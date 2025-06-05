@@ -1,6 +1,8 @@
-Rekt @ Bitmex bot
+[![Python App](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml/badge.svg)](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml)
 
-Runs under Python 2.7.X, not 3.X
+### Rekt @ Bitmex bot
+
+Runs under Python 3.XX
 
 Install required libs by using 'pip' tool
 
@@ -9,7 +11,7 @@ Libs are:
 - requests
 - tweepy
 
-Set the following environment variables with your Twitter credentials to enable
+Add following environment variables with your Twitter credentials to a .env file to enable
 posting to Twitter:
 
 - `TWITTER_APP_KEY`
@@ -19,7 +21,8 @@ posting to Twitter:
 
 If these are not provided, comment out the call that sends Twitter updates.
 
-All liquidations will be stored in sqllite local DB (see rekt.sqlite). Log file named rektrunner.log will capture calls to bitmex.com
-Some code is included to ensure only one instance of the bot runs. Its not completed and doesn't make any difference to runtime.
+All liquidations will be stored in sqllite local DB (see rekt.sqlite). 
+
+Log file named rektrunner.log will capture calls to bitmex.com
 
 Run the bot by executing command: "python rektrunner.py"
