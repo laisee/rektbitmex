@@ -4,7 +4,6 @@ import json
 import requests
 import time
 import tweepy
-from time import gmtime, strftime
 from traceback import format_exc
 import sqlite3
 import subprocess
@@ -16,7 +15,6 @@ from database import init_rekkage_db, init_pid_db
 logger = logging.getLogger('RektBitmex')
 
 
-"""Setup logging with file and console output."""
 def SetupLogging():
    """Return configured logger."""
    # configure logger with file and console handlers
@@ -42,13 +40,28 @@ def SetupLogging():
 def RunOnce():
     """Check for another running instance and exit if found."""
     script_name = os.path.basename(__file__)
-    l = subprocess.getstatusoutput("ps aux | grep -e '%s' | grep -v grep | awk '{print $2}'| awk '{print $2}'" % script_name)
-    if l[1]:
-        logger.info("process '%s' is already running, exiting now" % script_name)
-        sys.exit(0);
+    command = (
+        "ps aux | grep -e '%s' | grep -v grep | awk '{print $2}' | "
+        "awk '{print $2}'" % script_name
+    )
+    proc_output = subprocess.getstatusoutput(command)
+    if proc_output[1]:
+        logger.info(
+            "process '%s' is already running, exiting now" % script_name
+        )
+        sys.exit(0)
+
 
 """Insert or update a liquidation record."""
-def gotRek(rekt_key, symbol, qty, price, position, side, db_path="rekt.sqlite"):
+def gotRek(
+    rekt_key,
+    symbol,
+    qty,
+    price,
+    position,
+    side,
+    db_path="rekt.sqlite",
+):
     rc = False
     msg = []
     table_name = 'rekkage'
@@ -71,16 +84,16 @@ def gotRek(rekt_key, symbol, qty, price, position, side, db_path="rekt.sqlite"):
                 try:
                     with conn:
                         c.execute(
-                            "UPDATE Rekkage SET rekt_qty = %s WHERE rekt_key = '%s' "
-                            % (qty, rekt_key)
+                            "UPDATE Rekkage SET rekt_qty = %s "
+                            "WHERE rekt_key = '%s'" % (qty, rekt_key)
                         )
                     logger.info(
                         "Rekkord %s has been updated from %s to %s "
                         % (rekt_key, row[2], qty)
                     )
                     msg = (
-                        "Liquidation %s order for %s reduced size from %s to %s"
-                        % (side, symbol, row[2], qty)
+                        "Liquidation %s order for %s reduced size from %s "
+                        "to %s" % (side, symbol, row[2], qty)
                     )
                     WriteRekage([msg])
                 except BaseException:
@@ -90,7 +103,13 @@ def gotRek(rekt_key, symbol, qty, price, position, side, db_path="rekt.sqlite"):
             try:
                 with conn:
                     c.execute(
-                        "INSERT INTO {tn} (rekt_key,rekt_symbol,rekt_qty,rekt_price,rekt_position,rekt_side,rekt_ts) VALUES ('{rekt_key}','{rekt_symbol}',{rekt_qty},{rekt_price},'{rekt_position}','{rekt_side}',(CURRENT_TIMESTAMP))".format(
+                        (
+                            "INSERT INTO {tn} (rekt_key,rekt_symbol,rekt_qty,"
+                            "rekt_price,rekt_position,rekt_side,rekt_ts) "
+                            "VALUES ('{rekt_key}','{rekt_symbol}',{rekt_qty},"
+                            "{rekt_price},'{rekt_position}','{rekt_side}',"
+                            "(CURRENT_TIMESTAMP))"
+                        ).format(
                             tn=table_name,
                             rekt_key=rekt_key,
                             rekt_symbol=symbol,
@@ -113,76 +132,98 @@ def gotRek(rekt_key, symbol, qty, price, position, side, db_path="rekt.sqlite"):
 
     return rc
 
+
 """Fetch liquidation information from BitMEX."""
 def getRekage(db_path="rekt.sqlite"):
 
-   msgs = []
-   url = base_url + "order/liquidations"
-   
-   try:
-     r = requests.get(url)
-   except BaseException as ex:
-     logger.error(format_exc())
-     return ""   
+    msgs = []
+    url = base_url + "order/liquidations"
 
-   if r.status_code != 200:
-      logger.error( "\nError %s while calling URL %s:\n" % (r.status_code,url))
-      return msgs
-   
-   if r.text == "null":
-      logger.error("No content returned for URL %s" % url)
-      return msgs
-  
-   data = json.loads(r.text)
-   if data:
-      logger.info(data)
-      for rek in data:
-          if rek["side"] == "Buy":
-             position = "Short"
-          else:
-             position = "Long"
-          rc = gotRek(rek["orderID"], rek["symbol"], rek["leavesQty"], rek["price"], position, rek["side"], db_path=db_path)
-          if not rc and float(rek["leavesQty"]) > 0:
-             msgs.append("Liquidated %s position on %s. Limit %s order for %s @ %s created on www.bitmex.com" % (position,rek["symbol"],rek["side"],rek["leavesQty"],rek["price"]))
-   return msgs
+    try:
+        r = requests.get(url)
+    except BaseException:
+        logger.error(format_exc())
+        return ""
+
+    if r.status_code != 200:
+        logger.error("\nError %s while calling URL %s:\n" %
+                     (r.status_code, url))
+        return msgs
+
+    if r.text == "null":
+        logger.error("No content returned for URL %s" % url)
+        return msgs
+
+    data = json.loads(r.text)
+    if data:
+        logger.info(data)
+        for rek in data:
+            if rek["side"] == "Buy":
+                position = "Short"
+            else:
+                position = "Long"
+            rc = gotRek(
+                rek["orderID"],
+                rek["symbol"],
+                rek["leavesQty"],
+                rek["price"],
+                position,
+                rek["side"],
+                db_path=db_path,
+            )
+            if not rc and float(rek["leavesQty"]) > 0:
+                msgs.append(
+                    "Liquidated %s position on %s. Limit %s order for %s @ %s "
+                    "created on www.bitmex.com"
+                    % (
+                        position,
+                        rek["symbol"],
+                        rek["side"],
+                        rek["leavesQty"],
+                        rek["price"],
+                    )
+                )
+    return msgs
+
 
 """Send liquidation messages to Twitter."""
 def WriteRekage(msgs):
 
-   if msgs is None or len(msgs) == 0: 
-     return
+    if msgs is None or len(msgs) == 0:
+        return
 
-   # Consumer keys and access tokens
-   # Read credentials from environment variables
-   app_key             = os.getenv('TWITTER_APP_KEY')
-   app_secret          = os.getenv('TWITTER_APP_SECRET')
-   access_token        = os.getenv('TWITTER_ACCESS_TOKEN')
-   access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+    # Consumer keys and access tokens
+    # Read credentials from environment variables
+    app_key = os.getenv('TWITTER_APP_KEY')
+    app_secret = os.getenv('TWITTER_APP_SECRET')
+    access_token = os.getenv('TWITTER_ACCESS_TOKEN')
+    access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
 
-   auth = tweepy.OAuthHandler(app_key,app_secret)
-   auth.set_access_token(access_token,access_token_secret)
-   api = tweepy.API(auth)
-   for msg in msgs:
-      try:
-         logger.info("Sending twitter update '%s' " % msg)
-         api.update_status(msg)
-      except BaseException as ex:
-         logger.error(format_exc())
+    auth = tweepy.OAuthHandler(app_key, app_secret)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth)
+    for msg in msgs:
+        try:
+            logger.info("Sending twitter update '%s' " % msg)
+            api.update_status(msg)
+        except BaseException:
+            logger.error(format_exc())
+
 
 if __name__ == "__main__":
 
-   logger = SetupLogging()
-   RunOnce()
-   logger.info('Starting RektBitmex ...')
-   init_rekkage_db()
-   init_pid_db()
-   SLEEPTIME = 5 # seconds
+    logger = SetupLogging()
+    RunOnce()
+    logger.info('Starting RektBitmex ...')
+    init_rekkage_db()
+    init_pid_db()
+    SLEEPTIME = 5  # seconds
 
-   run = None    
-   while run != 'n':
-      logger.info("Updating Rekt List ...")
-      rekts = getRekage()
-      if rekts:
-         WriteRekage(rekts)
-      time.sleep(SLEEPTIME) 
-   logger.info('Closing RektBitmex ...')
+    run = None
+    while run != 'n':
+        logger.info("Updating Rekt List ...")
+        rekts = getRekage()
+        if rekts:
+            WriteRekage(rekts)
+        time.sleep(SLEEPTIME)
+    logger.info('Closing RektBitmex ...')
