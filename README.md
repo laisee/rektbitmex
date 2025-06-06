@@ -2,6 +2,7 @@
 [![Bandit Security Check](https://github.com/laisee/rektbitmex/actions/workflows/main.yml/badge.svg)](https://github.com/laisee/rektbitmex/actions/workflows/main.yml)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Coverage Status](https://codecov.io/gh/laisee/rektbitmex/branch/master/graph/badge.svg)](https://codecov.io/gh/laisee/rektbitmex)
 
 # 💥 Rekt @ BitMEX Bot
 
@@ -76,11 +77,11 @@ credentials are read from environment variables as noted above.
 ## Test Coverage
 
 Unit tests are located in the `tests` directory and can be executed with
-`pytest`:
+`pytest` and the `pytest-cov` plugin:
 
 ```bash
-pytest -q
+pytest --cov=./
 ```
 
 There are four tests covering database initialisation, record insertion and the
-basic helper functions.
+basic helper functions. Coverage results are uploaded to [Codecov](https://codecov.io/gh/laisee/rektbitmex) and displayed in the badge above.
