@@ -1,8 +1,11 @@
 [![Python App](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml/badge.svg)](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml)
+![Lint](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml/badge.svg?branch=main&event=push&job=lint)
 [![Bandit Security Check](https://github.com/laisee/rektbitmex/actions/workflows/main.yml/badge.svg)](https://github.com/laisee/rektbitmex/actions/workflows/main.yml)
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
-[![License: CC0-1.0](https://img.shields.io/badge/License-CC0%201.0-lightgrey.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 [![codecov](https://codecov.io/gh/laisee/rektbitmex/branch/main/graph/badge.svg)](https://codecov.io/gh/laisee/rektbitmex)
+[![Python Version](https://img.shields.io/badge/python-3.8-blue.svg)](https://www.python.org/)
+[![Python Version](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/)
+[![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+[![License: CC0-1.0](https://img.shields.io/badge/License-CC0%201.0-lightgrey.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 
 # 💥 Rekt @ BitMEX Bot
 
