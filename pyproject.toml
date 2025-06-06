@@ -1,0 +1,6 @@
+[project]
+name = "rektbitmex"
+version = "0.1.0"
+description = "BitMEX liquidation tracker"
+authors = [{name = "Unknown"}]
+requires-python = ">=3.8"

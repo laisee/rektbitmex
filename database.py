@@ -7,7 +7,7 @@ REKT_TABLE = "rekkage"
 PID_TABLE = "rekt_PID"
 
 
-def init_rekkage_db(db_path="rekt.sqlite"):
+def init_rekkage_db(db_path: str = "rekt.sqlite") -> None:
     """Create the rekkage table if it does not exist."""
     with sqlite3.connect(db_path) as conn:
         c = conn.cursor()
@@ -23,7 +23,7 @@ def init_rekkage_db(db_path="rekt.sqlite"):
         conn.commit()
 
 
-def init_pid_db(db_path="rekt.sqlite"):
+def init_pid_db(db_path: str = "rekt.sqlite") -> None:
     """Create the rekt_PID table if it does not exist."""
     with sqlite3.connect(db_path) as conn:
         c = conn.cursor()

@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 import json
@@ -7,23 +8,43 @@ import tweepy
 from traceback import format_exc
 import sqlite3
 import logging
+from logging.handlers import RotatingFileHandler
+import atexit
+from dataclasses import dataclass
+from typing import List
+
 from config import base_url
 from database import init_rekkage_db, init_pid_db
 
 # module level logger used by functions
-logger = logging.getLogger('RektBitmex')
+logger = logging.getLogger("RektBitmex")
 
 
-def SetupLogging():
+@dataclass
+class LiquidationRecord:
+    """Represent a liquidation event."""
+
+    order_id: str
+    symbol: str
+    qty: int
+    price: float
+    position: str
+    side: str
+
+
+def SetupLogging(log_level: str = "INFO") -> logging.Logger:
     """Return configured logger."""
 
-    logger.setLevel(logging.INFO)
+    level = getattr(logging, log_level.upper(), logging.INFO)
+    logger.setLevel(level)
 
-    fh = logging.FileHandler("rektbitmex.log")
-    fh.setLevel(logging.INFO)
+    fh = RotatingFileHandler(
+        "rektbitmex.log", maxBytes=1024 * 1024, backupCount=5
+    )
+    fh.setLevel(level)
 
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    ch.setLevel(level)
 
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -36,7 +57,7 @@ def SetupLogging():
     return logger
 
 
-def RunOnce(pid_file="rektbitmex.pid"):
+def RunOnce(pid_file: str = "rektbitmex.pid") -> None:
     """Exit if another instance of this script is already running."""
 
     if os.path.exists(pid_file):
@@ -45,7 +66,11 @@ def RunOnce(pid_file="rektbitmex.pid"):
                 existing_pid = int(fh.read().strip())
             os.kill(existing_pid, 0)
         except (OSError, ValueError):
-            pass
+            # Stale PID file
+            try:
+                os.remove(pid_file)
+            except OSError:
+                pass
         else:
             logger.info(
                 "process '%s' is already running, exiting now", existing_pid
@@ -55,51 +80,53 @@ def RunOnce(pid_file="rektbitmex.pid"):
     with open(pid_file, "w") as fh:
         fh.write(str(os.getpid()))
 
+    def cleanup() -> None:
+        try:
+            os.remove(pid_file)
+        except OSError:
+            pass
 
-def gotRek(
-    rekt_key,
-    symbol,
-    qty,
-    price,
-    position,
-    side,
-    db_path="rekt.sqlite",
-):
+    atexit.register(cleanup)
+
+
+def gotRek(record: LiquidationRecord, db_path: str = "rekt.sqlite") -> bool:
     """Insert or update a liquidation record."""
+
     rc = False
-    msg = []
+    msg: List[str] = []
     with sqlite3.connect(db_path) as conn:
         c = conn.cursor()
-        c.execute("SELECT * FROM rekkage WHERE rekt_key=?", (rekt_key,))
+        c.execute("SELECT * FROM rekkage WHERE rekt_key=?", (record.order_id,))
         row = c.fetchone()
         if row:
-            logger.info("checking record %s " % rekt_key)
+            logger.info("checking record %s " % record.order_id)
             rc = True
-            if qty < row[2]:
+            if record.qty < row[2]:
                 logger.info(
                     "Rekkord %s has decreased open fill qty from %s to %s "
-                    % (rekt_key, row[2], qty)
+                    % (record.order_id, row[2], record.qty)
                 )
                 try:
                     with conn:
                         c.execute(
                             "UPDATE Rekkage SET rekt_qty = ? "
                             "WHERE rekt_key = ?",
-                            (qty, rekt_key),
+                            (record.qty, record.order_id),
                         )
                     logger.info(
                         "Rekkord %s has been updated from %s to %s "
-                        % (rekt_key, row[2], qty)
+                        % (record.order_id, row[2], record.qty)
                     )
                     msg = (
                         "Liquidation %s order for %s reduced size from %s "
-                        "to %s" % (side, symbol, row[2], qty)
+                        "to %s"
+                        % (record.side, record.symbol, row[2], record.qty)
                     )
                     WriteRekage([msg])
-                except BaseException:
+                except Exception:
                     logger.error(format_exc())
         else:
-            logger.info("Rek %s does NOT exist" % rekt_key)
+            logger.info("Rek %s does NOT exist" % record.order_id)
             try:
                 with conn:
                     c.execute(
@@ -109,57 +136,66 @@ def gotRek(
                             "rekt_price, rekt_position, rekt_side, rekt_ts) "
                             "VALUES (?, ?, ?, ?, ?, ?, (CURRENT_TIMESTAMP))"
                         ),
-                        (rekt_key, symbol, qty, price, position, side),
+                        (
+                            record.order_id,
+                            record.symbol,
+                            record.qty,
+                            record.price,
+                            record.position,
+                            record.side,
+                        ),
                     )
                     cur = conn.cursor()
                     cur.execute(
                         "SELECT * FROM rekkage WHERE rekt_key=?",
-                        (rekt_key,),
+                        (record.order_id,),
                     )
                     for row in cur:
                         logger.info("Rekkord '%s' has been Added " % row[0])
-            except BaseException:
+            except Exception:
                 logger.error(format_exc())
 
     return rc
 
 
-def getRekage(db_path="rekt.sqlite"):
+def getRekage(
+    db_path: str = "rekt.sqlite", bitmex_url: str = base_url
+) -> List[str]:
     """Fetch liquidation information from BitMEX."""
 
-    msgs = []
-    url = base_url + "order/liquidations"
+    msgs: List[str] = []
+    url = bitmex_url + "order/liquidations"
 
     try:
         r = requests.get(url, timeout=10)
-    except BaseException:
-        logger.error(format_exc())
-        return ""
-
-    if r.status_code != 200:
-        logger.error("\nError %s while calling URL %s:\n" %
-                     (r.status_code, url))
+        r.raise_for_status()
+    except requests.RequestException as exc:
+        logger.error("Error fetching URL %s: %s", url, exc)
         return msgs
 
     if r.text == "null":
-        logger.error("No content returned for URL %s" % url)
+        logger.error("No content returned for URL %s", url)
         return msgs
 
-    data = json.loads(r.text)
+    try:
+        data = json.loads(r.text)
+    except ValueError as exc:
+        logger.error("Invalid JSON from %s: %s", url, exc)
+        return msgs
+
     if data:
         logger.info(data)
         for rek in data:
-            if rek["side"] == "Buy":
-                position = "Short"
-            else:
-                position = "Long"
+            position = "Short" if rek["side"] == "Buy" else "Long"
             rc = gotRek(
-                rek["orderID"],
-                rek["symbol"],
-                rek["leavesQty"],
-                rek["price"],
-                position,
-                rek["side"],
+                LiquidationRecord(
+                    rek["orderID"],
+                    rek["symbol"],
+                    rek["leavesQty"],
+                    rek["price"],
+                    position,
+                    rek["side"],
+                ),
                 db_path=db_path,
             )
             if not rc and float(rek["leavesQty"]) > 0:
@@ -177,7 +213,7 @@ def getRekage(db_path="rekt.sqlite"):
     return msgs
 
 
-def WriteRekage(msgs):
+def WriteRekage(msgs: List[str]) -> None:
     """Send liquidation messages to Twitter."""
 
     if msgs is None or len(msgs) == 0:
@@ -203,24 +239,53 @@ def WriteRekage(msgs):
         try:
             logger.info("Sending twitter update '%s' " % msg)
             api.update_status(msg)
-        except BaseException:
+        except Exception:
             logger.error(format_exc())
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="RektBitmex liquidation tracker")
+    parser.add_argument(
+        "--db-path", default="rekt.sqlite", help="Path to SQLite database"
+    )
+    parser.add_argument(
+        "--base-url", default=base_url, help="BitMEX API base URL"
+    )
+    parser.add_argument(
+        "--sleep-time",
+        type=int,
+        default=int(os.getenv("REKT_SLEEP_TIME", "5")),
+        help="Polling interval in seconds",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level",
+    )
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run a single iteration and exit",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
 
-    logger = SetupLogging()
+    logger = SetupLogging(args.log_level)
     RunOnce()
-    logger.info('Starting RektBitmex ...')
-    init_rekkage_db()
-    init_pid_db()
-    SLEEPTIME = 5  # seconds
+    logger.info("Starting RektBitmex ...")
+    init_rekkage_db(db_path=args.db_path)
+    init_pid_db(db_path=args.db_path)
 
-    run = None
-    while run != 'n':
+    while True:
         logger.info("Updating Rekt List ...")
-        rekts = getRekage()
+        rekts = getRekage(db_path=args.db_path, bitmex_url=args.base_url)
         if rekts:
             WriteRekage(rekts)
-        time.sleep(SLEEPTIME)
-    logger.info('Closing RektBitmex ...')
+        if args.once:
+            break
+        time.sleep(args.sleep_time)
+    logger.info("Closing RektBitmex ...")
