@@ -8,7 +8,7 @@
 
 `rektbitmex` tracks liquidation events on [BitMEX](https://www.bitmex.com) and stores
 information about each event in a local SQLite database. When configured with
-Twitter credentials it can also tweet a short summary of the liquidation.
+Twitter credentials it tweets a short summary of the liquidation.
 
 ---
 
