@@ -1,4 +1,5 @@
 [![Python App](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml/badge.svg)](https://github.com/laisee/rektbitmex/actions/workflows/python-app.yml)
+[![Bandit Security Check](https://github.com/laisee/rektbitmex/actions/workflows/main.yml/badge.svg)](https://github.com/laisee/rektbitmex/actions/workflows/main.yml)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
