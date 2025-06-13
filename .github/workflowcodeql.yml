@@ -1,0 +1,39 @@
+name: GitHub CodeQL Security Analysis
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 1 * * 1'  # Weekly on Monday at 01:00 UTC
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript', 'python' ]  # Adjust as per your repo
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Build project
+        run: |
+          # Add build steps here if needed (e.g., npm install, pip install)
+          echo "No build steps needed for static analysis"
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
